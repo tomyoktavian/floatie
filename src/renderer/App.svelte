@@ -4,6 +4,7 @@
   import WebviewContainer from './components/WebviewContainer.svelte'
   import VideoControls    from './components/VideoControls.svelte'
   import ExtensionPanel   from './components/ExtensionPanel.svelte'
+  import { uaFor }        from './ua'
 
   let webviewRef     = $state<Electron.WebviewTag | null>(null)
   let currentUrl     = $state('')
@@ -60,7 +61,7 @@
   <!-- ── Top chrome (toggle with the hide button) ───────── -->
   <div class="top-chrome" class:collapsed={toolbarHidden}>
     <Toolbar bind:webview={webviewRef} bind:currentUrl bind:extPanelOpen onHide={() => setToolbarHidden(true)} />
-    <QuickLinks {currentUrl} onNavigate={(url) => webviewRef?.loadURL(url)} />
+    <QuickLinks {currentUrl} onNavigate={(url) => webviewRef?.loadURL(url, { userAgent: uaFor(url) })} />
     <div class="loading-bar" style:width="{loadingWidth}%" style:opacity={loadingVisible ? '1' : '0'}></div>
   </div>
 

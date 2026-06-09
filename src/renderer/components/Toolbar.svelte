@@ -1,5 +1,6 @@
 <script lang="ts">
   import AutoScrollPanel from './AutoScrollPanel.svelte'
+  import { uaFor } from '../ua'
 
   let {
     webview      = $bindable<Electron.WebviewTag | null>(null),
@@ -104,7 +105,7 @@
         ? 'https://' + url
         : 'https://www.google.com/search?q=' + encodeURIComponent(url)
     }
-    webview?.loadURL(url)
+    webview?.loadURL(url, { userAgent: uaFor(url) })
   }
 
   async function togglePin() {

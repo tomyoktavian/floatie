@@ -11,26 +11,38 @@ import { detectBrowsers, getProfiles, listExtensionsFromProfile } from './bridge
 // Must be set before app is ready.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
-const GUEST_UA =
+const MOBILE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) ' +
   'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
+const DESKTOP_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+  '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+// Meta sites (FB/IG/Threads) get a desktop UA — their login & "Log in with
+// Facebook" SSO is far more reliable on desktop than on the mobile/in-app path.
+// Everything else stays mobile for the immersive feed.
+const META_RE = /(?:^|\.)(?:facebook\.com|instagram\.com|threads\.net|threads\.com)$/i
+const uaFor = (u: string): string => {
+  try { return META_RE.test(new URL(u).hostname) ? DESKTOP_UA : MOBILE_UA } catch { return MOBILE_UA }
+}
 
-// Default UA for any webContents that doesn't set its own (e.g. login pop-ups).
-// Presents as real mobile Safari (no "Electron" token) so Meta/etc. don't reject
-// OAuth flows. The feed webview overrides this via its own `useragent` attribute.
-app.userAgentFallback = GUEST_UA
+app.userAgentFallback = MOBILE_UA
 
 // Login flows (incl. "Log in with Facebook") open in the SAME webview like a
-// normal browser tab — instead of a separate pop-up. Meta's OAuth pop-up is
-// flaky in embedded browsers ("This page isn't available"); the full-page
-// redirect flow in one window is far more reliable, and it stays in the same
-// session (persist:floatie) so the login sticks.
+// normal browser tab — never a pop-up window. Meta's OAuth pop-up is flaky in
+// embedded browsers ("This page isn't available"); the full-page redirect flow
+// in one window + shared session (persist:floatie) is reliable and keeps SSO.
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() !== 'webview') return
   contents.setWindowOpenHandler(({ url }) => {
-    if (url && /^https?:/i.test(url)) contents.loadURL(url).catch(() => {})
+    if (url && /^https?:/i.test(url)) {
+      contents.setUserAgent(uaFor(url))
+      contents.loadURL(url).catch(() => {})
+    }
     return { action: 'deny' }
   })
+  // Switch UA per destination so Meta navigations are desktop, feeds stay mobile.
+  contents.on('will-navigate', (_ev, url) => { if (typeof url === 'string') contents.setUserAgent(uaFor(url)) })
+  contents.on('will-redirect', (_ev, url) => { if (typeof url === 'string') contents.setUserAgent(uaFor(url)) })
 })
 
 interface StoreSchema {
