@@ -20,27 +20,16 @@ const GUEST_UA =
 // OAuth flows. The feed webview overrides this via its own `useragent` attribute.
 app.userAgentFallback = GUEST_UA
 
-// Allow login pop-ups (Facebook / TikTok / Instagram sign-in, incl. OAuth like
-// "Log in with Facebook") to open as a real CHILD window — keeping window.opener
-// intact so OAuth can postMessage the result back. The pop-up inherits the feed's
-// session (persist:floatie), so login sticks in the main webview. The feed reloads
-// when the pop-up closes. (Google/YouTube block embedded-webview login regardless.)
+// Login flows (incl. "Log in with Facebook") open in the SAME webview like a
+// normal browser tab — instead of a separate pop-up. Meta's OAuth pop-up is
+// flaky in embedded browsers ("This page isn't available"); the full-page
+// redirect flow in one window is far more reliable, and it stays in the same
+// session (persist:floatie) so the login sticks.
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() !== 'webview') return
-  contents.setWindowOpenHandler(() => ({
-    action: 'allow',
-    overrideBrowserWindowOptions: {
-      width : 460,
-      height: 720,
-      resizable: true,
-      autoHideMenuBar: true,
-      backgroundColor: '#ffffff',
-    },
-  }))
-  contents.on('did-create-window', (win) => {
-    win.setAlwaysOnTop(true, 'floating')
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-    win.on('closed', () => { try { contents.reload() } catch { /* gone */ } })
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url && /^https?:/i.test(url)) contents.loadURL(url).catch(() => {})
+    return { action: 'deny' }
   })
 })
 
