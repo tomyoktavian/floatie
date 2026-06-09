@@ -1,6 +1,6 @@
 {
   "name": "floatie",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Floating mini browser for YouTube Shorts, TikTok, and Reels",
   "type": "module",
   "main": "./out/main/index.js",
@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.111",
+    "@iconify-json/simple-icons": "^1.2.86",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "electron": "^42.3.3",
     "electron-builder": "^26.15.2",
@@ -35,7 +36,9 @@
     "asar": true,
     "compression": "maximum",
     "npmRebuild": false,
-    "electronLanguages": ["en-US"],
+    "electronLanguages": [
+      "en-US"
+    ],
     "files": [
       "out/**/*"
     ],
@@ -43,13 +46,24 @@
       "category": "public.app-category.utilities",
       "icon": "build/icon.icns",
       "target": [
-        { "target": "dmg", "arch": ["arm64", "universal"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "universal"
+          ]
+        }
       ]
     },
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     }
   }

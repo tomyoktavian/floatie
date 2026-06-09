@@ -28,6 +28,18 @@ const DESKTOP_UA =
 // attribute so every site serves its mobile layout.
 app.userAgentFallback = MOBILE_UA
 
+// True for native-app deep links (instagram://, fb://, itms-apps://, market://…)
+// and App/Play Store pages — we never want the feed to bounce out to those.
+const isAppStoreOrDeepLink = (url: string): boolean => {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return true
+    if (/(^|\.)(apps\.apple\.com|itunes\.apple\.com)$/i.test(u.hostname)) return true
+    if (/(^|\.)play\.google\.com$/i.test(u.hostname) && u.pathname.startsWith('/store')) return true
+    return false
+  } catch { return true }
+}
+
 // Login flows (incl. "Log in with Facebook") open in the SAME webview like a
 // normal browser tab — never a pop-up window. Meta's OAuth pop-up is flaky in
 // embedded browsers ("This page isn't available"); the full-page redirect flow
@@ -35,9 +47,13 @@ app.userAgentFallback = MOBILE_UA
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() !== 'webview') return
   contents.setWindowOpenHandler(({ url }) => {
-    if (url && /^https?:/i.test(url)) contents.loadURL(url).catch(() => {})
+    if (url && /^https?:/i.test(url) && !isAppStoreOrDeepLink(url)) contents.loadURL(url).catch(() => {})
     return { action: 'deny' }
   })
+  // Stay in the browser: never open a native app or the App/Play Store.
+  const block = (e: Electron.Event, url: string) => { if (isAppStoreOrDeepLink(url)) e.preventDefault() }
+  contents.on('will-navigate', block)
+  contents.on('will-redirect', block)
 })
 
 interface StoreSchema {

@@ -13,6 +13,7 @@ export default defineConfig({
       warn: true,
       collections: {
         lucide: () => import('@iconify-json/lucide/icons.json').then(i => i.default),
+        'simple-icons': () => import('@iconify-json/simple-icons/icons.json').then(i => i.default),
       },
     }),
   ],

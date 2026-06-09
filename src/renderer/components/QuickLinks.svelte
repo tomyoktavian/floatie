@@ -7,12 +7,12 @@
   interface CustomLink { label: string; url: string }
 
   const LINKS = [
-    { label: 'Shorts',  icon: 'i-lucide-play',      url: 'https://www.youtube.com/shorts/'  },
-    { label: 'TikTok',  icon: 'i-lucide-music',      url: 'https://www.tiktok.com/'          },
-    { label: 'Reels',   icon: 'i-lucide-film',       url: 'https://www.instagram.com/reels/' },
-    { label: 'FB',      icon: 'i-lucide-thumbs-up',  url: 'https://m.facebook.com/reels/'    },
-    { label: 'X',       icon: 'i-lucide-twitter',    url: 'https://x.com/home'               },
-    { label: 'Threads', icon: 'i-lucide-at-sign',    url: 'https://www.threads.net/'         },
+    { label: 'Shorts',  icon: 'i-simple-icons-youtube',   color: '#FF0000', url: 'https://www.youtube.com/shorts/'  },
+    { label: 'TikTok',  icon: 'i-simple-icons-tiktok',    color: '#FE2C55', url: 'https://www.tiktok.com/'          },
+    { label: 'Reels',   icon: 'i-simple-icons-instagram', color: '#E1306C', url: 'https://www.instagram.com/reels/' },
+    { label: 'FB',      icon: 'i-simple-icons-facebook',  color: '#1877F2', url: 'https://m.facebook.com/reels/'    },
+    { label: 'X',       icon: 'i-simple-icons-x',         color: '#e7e9ea', url: 'https://x.com/home'               },
+    { label: 'Threads', icon: 'i-simple-icons-threads',   color: '#e7e9ea', url: 'https://www.threads.net/'         },
   ]
 
   let customLinks = $state<CustomLink[]>([])
@@ -72,8 +72,8 @@
 <div class="ql-wrap">
   <div class="ql-bar" style="-webkit-app-region: no-drag">
     {#each LINKS as link}
-      <button class="ql-pill" class:active={isActive(link.url)} onclick={() => onNavigate(link.url)} title={link.url}>
-        <span class="{link.icon} ql-icon"></span>
+      <button class="ql-pill" class:active={isActive(link.url)} style="--brand: {link.color}" onclick={() => onNavigate(link.url)} title={link.url}>
+        <span class="{link.icon} ql-icon" style:color={link.color}></span>
         {link.label}
       </button>
     {/each}
@@ -151,10 +151,14 @@
     flex-shrink: 0;
     letter-spacing: 0.01em;
   }
-  .ql-pill:hover { background: #1a1a1a; border-color: #333; color: #bbb; }
-  .ql-pill.active { background: rgba(230, 57, 70, 0.1); border-color: rgba(230, 57, 70, 0.45); color: #e63946; }
+  .ql-pill:hover { background: #1a1a1a; border-color: #383838; color: #ddd; }
+  .ql-pill.active {
+    background: color-mix(in srgb, var(--brand, #e63946) 15%, transparent);
+    border-color: color-mix(in srgb, var(--brand, #e63946) 55%, transparent);
+    color: var(--brand, #e63946);
+  }
 
-  .ql-icon { display: block; width: 11px; height: 11px; color: inherit; flex-shrink: 0; }
+  .ql-icon { display: block; width: 12px; height: 12px; color: inherit; flex-shrink: 0; }
 
   /* custom links: remove button revealed on hover */
   .ql-pill--custom { padding-right: 5px; }
