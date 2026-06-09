@@ -11,6 +11,7 @@ declare interface Window {
     getStore        : (k: string)  => Promise<unknown>
     setStore        : (k: string, v: unknown) => Promise<void>
     clearData       : () => Promise<boolean>
+    setDesktop      : (on: boolean) => Promise<void>
     scrollGesture   : (dir: number, w: number, h: number) => Promise<void>
     extList         : () => Promise<unknown>
     extAdd          : () => Promise<void>

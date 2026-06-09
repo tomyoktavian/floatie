@@ -4,7 +4,6 @@
   import WebviewContainer from './components/WebviewContainer.svelte'
   import VideoControls    from './components/VideoControls.svelte'
   import ExtensionPanel   from './components/ExtensionPanel.svelte'
-  import { uaFor }        from './ua'
 
   let webviewRef     = $state<Electron.WebviewTag | null>(null)
   let currentUrl     = $state('')
@@ -23,6 +22,44 @@
   }
 
   const isMac = window.mf.platform === 'darwin'
+
+  // "Desktop site" (mobile by default; needed only to log into Meta). Lives here
+  // so the login caution banner can react to it.
+  let desktopMode = $state(false)
+  function setDesktop(on: boolean) {
+    desktopMode = on
+    window.mf.setDesktop(on)   // main swaps the feed UA + reloads
+  }
+
+  // Show a caution on Meta login / Accounts Center pages while desktop is off —
+  // Meta's login breaks on the mobile/embedded path.
+  const META_RE = /(?:^|\.)(?:facebook\.com|instagram\.com|threads\.net|threads\.com)$/i
+  const AUTH_RE = /accountscenter|\/login|\/accounts\/login|\/oauth|\/dialog|\/checkpoint|\/challenge|two_factor/i
+  function isMetaLogin(url: string): boolean {
+    try { const u = new URL(url); return META_RE.test(u.hostname) && AUTH_RE.test(u.hostname + u.pathname) }
+    catch { return false }
+  }
+  // IG/Threads show their login form at the site root (in-page), so URL alone
+  // isn't enough — also detect a password field on the page.
+  let hasLoginForm = $state(false)
+  let loginCaution = $derived(!desktopMode && (hasLoginForm || isMetaLogin(currentUrl)))
+
+  $effect(() => {
+    const wv = webviewRef
+    if (!wv) return
+    const check = async () => {
+      try {
+        if (!META_RE.test(new URL(currentUrl).hostname)) { hasLoginForm = false; return }
+        hasLoginForm = await wv.executeJavaScript('!!document.querySelector("input[type=password]")')
+      } catch { hasLoginForm = false }
+    }
+    wv.addEventListener('did-stop-loading', check)
+    wv.addEventListener('did-navigate-in-page', check)
+    return () => {
+      wv.removeEventListener('did-stop-loading', check)
+      wv.removeEventListener('did-navigate-in-page', check)
+    }
+  })
 
   function onLoadStart() { loadingWidth = 60; loadingVisible = true }
   function onLoadEnd()   {
@@ -60,8 +97,8 @@
 <div class="app-root">
   <!-- ── Top chrome (toggle with the hide button) ───────── -->
   <div class="top-chrome" class:collapsed={toolbarHidden}>
-    <Toolbar bind:webview={webviewRef} bind:currentUrl bind:extPanelOpen onHide={() => setToolbarHidden(true)} />
-    <QuickLinks {currentUrl} onNavigate={(url) => webviewRef?.loadURL(url, { userAgent: uaFor(url) })} />
+    <Toolbar bind:webview={webviewRef} bind:currentUrl bind:extPanelOpen {desktopMode} onToggleDesktop={() => setDesktop(!desktopMode)} onHide={() => setToolbarHidden(true)} />
+    <QuickLinks {currentUrl} onNavigate={(url) => webviewRef?.loadURL(url)} />
     <div class="loading-bar" style:width="{loadingWidth}%" style:opacity={loadingVisible ? '1' : '0'}></div>
   </div>
 
@@ -74,11 +111,20 @@
 
   <ExtensionPanel bind:open={extPanelOpen} />
 
+  <!-- Login caution: Meta login needs the desktop site -->
+  {#if loginCaution}
+    <div class="login-caution">
+      <span class="i-lucide-info caution-icon"></span>
+      <span class="caution-text">Untuk login FB, aktifkan <b>Desktop site</b> dulu.</span>
+      <button class="caution-btn" onclick={() => setDesktop(true)}>Aktifkan</button>
+    </div>
+  {/if}
+
   <!-- video fills the middle -->
   <WebviewContainer
     bind:ref={webviewRef}
     bind:currentUrl
-    initialUrl="https://www.youtube.com/shorts/"
+    initialUrl="https://www.youtube.com/shorts/?gl=ID&hl=id&persist_gl=1&persist_hl=1"
     onLoadStart={onLoadStart}
     onLoadEnd={onLoadEnd}
   />
@@ -148,4 +194,34 @@
     background: #e63946;
     transition: width 0.3s ease, opacity 0.4s ease;
   }
+
+  /* Login caution banner — shown on Meta login pages while Desktop site is off */
+  .login-caution {
+    flex-shrink: 0;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    background: #2a2410;
+    border-bottom: 1px solid #4a3d12;
+    color: #f0d98a;
+    font-size: 12px;
+  }
+  .caution-icon { width: 15px; height: 15px; flex-shrink: 0; color: #f0c040; }
+  .caution-text { flex: 1; line-height: 1.3; }
+  .caution-text b { color: #ffe08a; }
+  .caution-btn {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #4ea1ff;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+  }
+  .caution-btn:hover { background: #3a8de0; }
 </style>

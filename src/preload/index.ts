@@ -17,6 +17,9 @@ const mf = {
   // Clear browsing data (cookies/cache/logins) after a confirm dialog
   clearData      : ()            => ipcRenderer.invoke('data:clear'),
 
+  // "Desktop site" toggle (mobile by default; desktop is needed to log into Meta)
+  setDesktop     : (on: boolean) => ipcRenderer.invoke('view:setDesktop', on),
+
   // Trusted touch-swipe navigation (fallback for YouTube/TikTok)
   scrollGesture  : (dir: number, w: number, h: number) => ipcRenderer.invoke('mf:scrollGesture', dir, w, h),
 

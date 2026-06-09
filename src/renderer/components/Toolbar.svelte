@@ -1,17 +1,20 @@
 <script lang="ts">
   import AutoScrollPanel from './AutoScrollPanel.svelte'
-  import { uaFor } from '../ua'
 
   let {
     webview      = $bindable<Electron.WebviewTag | null>(null),
     currentUrl   = $bindable(''),
     extPanelOpen = $bindable(false),
+    desktopMode  = false,
+    onToggleDesktop,
     onHide,
   }: {
-    webview      : Electron.WebviewTag | null
-    currentUrl   : string
-    extPanelOpen : boolean
-    onHide      ?: () => void
+    webview        : Electron.WebviewTag | null
+    currentUrl     : string
+    extPanelOpen   : boolean
+    desktopMode    : boolean
+    onToggleDesktop?: () => void
+    onHide        ?: () => void
   } = $props()
 
   let isPinned   = $state(true)
@@ -105,7 +108,7 @@
         ? 'https://' + url
         : 'https://www.google.com/search?q=' + encodeURIComponent(url)
     }
-    webview?.loadURL(url, { userAgent: uaFor(url) })
+    webview?.loadURL(url)
   }
 
   async function togglePin() {
@@ -238,6 +241,11 @@
         <span class="i-lucide-pin menu-row-icon" style:color={isPinned ? '#f4a261' : '#666'}></span>
         <span class="menu-row-label">Always on top</span>
         <span class="menu-badge" class:on={isPinned}>{isPinned ? 'On' : 'Off'}</span>
+      </button>
+      <button class="menu-row" onclick={() => onToggleDesktop?.()} title="Nyalakan untuk login Facebook/Instagram/Threads (situs jadi versi desktop). Matikan untuk tampilan mobile.">
+        <span class="i-lucide-monitor menu-row-icon" style:color={desktopMode ? '#4ea1ff' : '#666'}></span>
+        <span class="menu-row-label">Desktop site</span>
+        <span class="menu-badge" class:on={desktopMode}>{desktopMode ? 'On' : 'Off'}</span>
       </button>
       <button class="menu-row" onclick={() => { extPanelOpen = !extPanelOpen; menuOpen = false }}>
         <span class="i-lucide-puzzle menu-row-icon" style:color={extPanelOpen ? '#6366f1' : '#666'}></span>

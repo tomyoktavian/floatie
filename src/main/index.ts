@@ -10,21 +10,22 @@ import { detectBrowsers, getProfiles, listExtensionsFromProfile } from './bridge
 // Let videos start playing with sound without requiring a user gesture.
 // Must be set before app is ready.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+// Default content language/region → Indonesia (so YouTube/feeds lean local).
+app.commandLine.appendSwitch('lang', 'id-ID')
+app.commandLine.appendSwitch('accept-lang', 'id-ID,id')
 
 const MOBILE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) ' +
   'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
+// Used by the "Desktop site" toggle — needed to log into Meta (FB/IG/Threads),
+// whose Accounts Center login breaks on the mobile/embedded path.
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-// Meta sites (FB/IG/Threads) get a desktop UA — their login & "Log in with
-// Facebook" SSO is far more reliable on desktop than on the mobile/in-app path.
-// Everything else stays mobile for the immersive feed.
-const META_RE = /(?:^|\.)(?:facebook\.com|instagram\.com|threads\.net|threads\.com)$/i
-const uaFor = (u: string): string => {
-  try { return META_RE.test(new URL(u).hostname) ? DESKTOP_UA : MOBILE_UA } catch { return MOBILE_UA }
-}
 
+// Default UA (real mobile Safari, no "Electron" token) for any webContents that
+// doesn't set its own. The feed webview uses the same value via its `useragent`
+// attribute so every site serves its mobile layout.
 app.userAgentFallback = MOBILE_UA
 
 // Login flows (incl. "Log in with Facebook") open in the SAME webview like a
@@ -34,15 +35,9 @@ app.userAgentFallback = MOBILE_UA
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() !== 'webview') return
   contents.setWindowOpenHandler(({ url }) => {
-    if (url && /^https?:/i.test(url)) {
-      contents.setUserAgent(uaFor(url))
-      contents.loadURL(url).catch(() => {})
-    }
+    if (url && /^https?:/i.test(url)) contents.loadURL(url).catch(() => {})
     return { action: 'deny' }
   })
-  // Switch UA per destination so Meta navigations are desktop, feeds stay mobile.
-  contents.on('will-navigate', (_ev, url) => { if (typeof url === 'string') contents.setUserAgent(uaFor(url)) })
-  contents.on('will-redirect', (_ev, url) => { if (typeof url === 'string') contents.setUserAgent(uaFor(url)) })
 })
 
 interface StoreSchema {
@@ -128,6 +123,11 @@ function createWindow() {
 // ── Startup sequence ─────────────────────────────────────
 app.whenReady().then(async () => {
   await initAdblock()
+  // Send an Indonesian Accept-Language on every request so sites serve local content.
+  session.fromPartition('persist:floatie').webRequest.onBeforeSendHeaders((details, cb) => {
+    details.requestHeaders['Accept-Language'] = 'id-ID,id;q=0.9,en;q=0.6'
+    cb({ requestHeaders: details.requestHeaders })
+  })
   await loadSavedExtensions(store)
   createWindow()
   setupIPC()
@@ -154,6 +154,15 @@ function setupIPC() {
   ipcMain.handle('adblock:toggle',  (_, v: boolean) => { toggleAdblock(v); store.set('adblockEnabled', v) })
   ipcMain.handle('store:get',       (_, k: string)  => store.get(k as keyof StoreSchema))
   ipcMain.handle('store:set',       (_, k: string, v: unknown) => store.set(k as keyof StoreSchema, v as any))
+
+  // "Desktop site" toggle: swap the feed's UA (persists for the session) + reload.
+  // Mobile by default; turn on to log into Meta, then back off for the mobile feed.
+  ipcMain.handle('view:setDesktop', (_, on: boolean) => {
+    const guest = webContents.getAllWebContents().find((c) => c.getType() === 'webview')
+    if (!guest) return
+    guest.setUserAgent(on ? DESKTOP_UA : MOBILE_UA)
+    guest.reload()
+  })
 
   // Clear all browsing data (cookies, cache, site storage / logins) after the
   // user confirms. App settings & custom links are kept. Returns true if cleared.
