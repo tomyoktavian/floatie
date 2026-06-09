@@ -148,6 +148,10 @@ app.whenReady().then(async () => {
   createWindow()
   setupIPC()
 
+  // Always keep a Dock icon on macOS so the app can be activated / quit / force-
+  // quit from the Dock (right-click → Quit), even when the window is closed.
+  if (process.platform === 'darwin') app.dock?.show()
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })

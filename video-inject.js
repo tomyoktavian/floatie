@@ -69,7 +69,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('video, audio'), applyVol)
   }
 
-  ;['play', 'loadeddata', 'playing'].forEach(function (evt) {
+  ;['play', 'loadeddata', 'playing', 'canplay', 'volumechange'].forEach(function (evt) {
     document.addEventListener(evt, function (e) {
       const t = e.target
       if (t && (t.tagName === 'VIDEO' || t.tagName === 'AUDIO')) applyVol(t)
