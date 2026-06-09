@@ -15,35 +15,32 @@ const GUEST_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) ' +
   'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
-// Allow login pop-ups (Facebook / TikTok / Instagram sign-in) to open in a real
-// window that SHARES the persistent session, so the login also applies to the
-// main webview. When the pop-up closes, refresh the feed to show the logged-in
-// state. (Google/YouTube block embedded-webview login regardless, so excluded.)
+// Default UA for any webContents that doesn't set its own (e.g. login pop-ups).
+// Presents as real mobile Safari (no "Electron" token) so Meta/etc. don't reject
+// OAuth flows. The feed webview overrides this via its own `useragent` attribute.
+app.userAgentFallback = GUEST_UA
+
+// Allow login pop-ups (Facebook / TikTok / Instagram sign-in, incl. OAuth like
+// "Log in with Facebook") to open as a real CHILD window — keeping window.opener
+// intact so OAuth can postMessage the result back. The pop-up inherits the feed's
+// session (persist:floatie), so login sticks in the main webview. The feed reloads
+// when the pop-up closes. (Google/YouTube block embedded-webview login regardless.)
 app.on('web-contents-created', (_e, contents) => {
   if (contents.getType() !== 'webview') return
-  contents.setWindowOpenHandler(({ url }) => {
-    // Build the pop-up ourselves so it uses the SAME session object as the
-    // feed (cookies shared → login sticks in the main webview too).
-    const popup = new BrowserWindow({
+  contents.setWindowOpenHandler(() => ({
+    action: 'allow',
+    overrideBrowserWindowOptions: {
       width : 460,
       height: 720,
       resizable: true,
       autoHideMenuBar: true,
       backgroundColor: '#ffffff',
-      webPreferences: {
-        session: contents.session,
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: false,
-      },
-    })
-    popup.setAlwaysOnTop(true, 'floating')
-    popup.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-    popup.webContents.setUserAgent(GUEST_UA)
-    popup.loadURL(url)
-    // refresh the feed when the login window closes, so the logged-in state shows
-    popup.on('closed', () => { try { contents.reload() } catch { /* gone */ } })
-    return { action: 'deny' }
+    },
+  }))
+  contents.on('did-create-window', (win) => {
+    win.setAlwaysOnTop(true, 'floating')
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    win.on('closed', () => { try { contents.reload() } catch { /* gone */ } })
   })
 })
 
