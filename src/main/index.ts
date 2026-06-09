@@ -155,6 +155,24 @@ function setupIPC() {
   ipcMain.handle('store:get',       (_, k: string)  => store.get(k as keyof StoreSchema))
   ipcMain.handle('store:set',       (_, k: string, v: unknown) => store.set(k as keyof StoreSchema, v as any))
 
+  // Clear all browsing data (cookies, cache, site storage / logins) after the
+  // user confirms. App settings & custom links are kept. Returns true if cleared.
+  ipcMain.handle('data:clear', async () => {
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      buttons: ['Batal', 'Hapus Data'],
+      defaultId: 0,
+      cancelId: 0,
+      message: 'Hapus semua data Floatie?',
+      detail: 'Cookie, cache, dan sesi login akan dihapus — Anda perlu login ulang ke semua situs. Setelan & link custom tetap aman.',
+    })
+    if (response !== 1) return false
+    const ses = session.fromPartition('persist:floatie')
+    await ses.clearStorageData()
+    await ses.clearCache()
+    return true
+  })
+
   // Trusted touch-swipe on the guest feed (YouTube/TikTok ignore synthetic events).
   // Used as the fallback when the in-page container can't be scrolled.
   ipcMain.handle('mf:scrollGesture', async (_, dir: number, w: number, h: number) => {

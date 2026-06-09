@@ -132,6 +132,12 @@
     window.mf.setStore('opacity', opacity / 100)
   }
 
+  async function clearData() {
+    menuOpen = false
+    const ok = await window.mf.clearData()   // shows a native confirm dialog
+    if (ok) webview?.reload()                // refresh feed to show logged-out state
+  }
+
   function getFaviconUrl(url: string) {
     try { return `${new URL(url).origin}/favicon.ico` } catch { return '' }
   }
@@ -256,6 +262,14 @@
         <input class="menu-slider" type="range" min="40" max="100" step="5" value={opacity} oninput={onOpacityInput} aria-label="Opacity" />
         <span class="menu-val">{opacity}%</span>
       </div>
+
+      <div class="menu-sep"></div>
+
+      <!-- Clear browsing data (cookies / cache / logins) — confirms first -->
+      <button class="menu-row menu-row--danger" onclick={clearData} title="Hapus cookie, cache, dan sesi login">
+        <span class="i-lucide-trash-2 menu-row-icon"></span>
+        <span class="menu-row-label">Clear data</span>
+      </button>
   </div>
 </div>
 
@@ -368,6 +382,9 @@
   .menu-row:hover { background: #242424; }
   .menu-row--slider { cursor: default; }
   .menu-row--slider:hover { background: transparent; }
+  .menu-row--danger { color: #f06b6b; }
+  .menu-row--danger .menu-row-icon { color: #f06b6b; }
+  .menu-row--danger:hover { background: rgba(230, 57, 70, 0.14); }
 
   .menu-row-icon { width: 15px; height: 15px; flex-shrink: 0; color: #888; }
   .menu-row-label { flex: 1; white-space: nowrap; }

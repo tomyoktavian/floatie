@@ -14,6 +14,9 @@ const mf = {
   getStore       : (k: string)   => ipcRenderer.invoke('store:get', k),
   setStore       : (k: string, v: unknown) => ipcRenderer.invoke('store:set', k, v),
 
+  // Clear browsing data (cookies/cache/logins) after a confirm dialog
+  clearData      : ()            => ipcRenderer.invoke('data:clear'),
+
   // Trusted touch-swipe navigation (fallback for YouTube/TikTok)
   scrollGesture  : (dir: number, w: number, h: number) => ipcRenderer.invoke('mf:scrollGesture', dir, w, h),
 

@@ -10,6 +10,7 @@ declare interface Window {
     toggleAdblock   : (v: boolean) => Promise<void>
     getStore        : (k: string)  => Promise<unknown>
     setStore        : (k: string, v: unknown) => Promise<void>
+    clearData       : () => Promise<boolean>
     scrollGesture   : (dir: number, w: number, h: number) => Promise<void>
     extList         : () => Promise<unknown>
     extAdd          : () => Promise<void>
